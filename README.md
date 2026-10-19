@@ -1,155 +1,53 @@
-# Ingestão e Busca Semântica com LangChain e Postgres
+# Prisma PDF
 
-## Objetivo
+Consulta de documentos pelo terminal com Python, LangChain, Gemini e PostgreSQL/pgvector. O PDF é dividido em trechos de até 1000 caracteres, com sobreposição de 150, e cada pergunta recupera até dez trechos do documento selecionado.
 
-Você deve entregar um software capaz de:
+## Como executar
 
-- Ingestão: Ler um arquivo PDF e salvar suas informações em um banco de dados PostgreSQL com extensão pgVector.
-- Busca: Permitir que o usuário faça perguntas via linha de comando (CLI) e receba respostas baseadas apenas no conteúdo do PDF.
+Pré-requisitos: Python 3.12, Docker com Compose e uma chave do Google AI Studio com acesso aos modelos configurados.
 
-## Exemplo no CLI
-
-Faça sua pergunta:
-
-```
-PERGUNTA: Qual o faturamento da Empresa SuperTechIABrazil?
-RESPOSTA: O faturamento foi de 10 milhões de reais.
-
----
-
-Perguntas fora do contexto:
-
-PERGUNTA: Quantos clientes temos em 2024?
-RESPOSTA: Não tenho informações necessárias para responder sua pergunta.
-```
-
-## Tecnologias obrigatórias
-
-- Linguagem: Python
-- Framework: LangChain
-- Banco de dados: PostgreSQL + pgVector
-- Execução do banco de dados: Docker & Docker Compose (docker-compose fornecido no repositório de exemplo)
-
-## Pacotes recomendados
-
-- Split: `from langchain_text_splitters import RecursiveCharacterTextSplitter`
-- Embeddings (OpenAI): `from langchain_openai import OpenAIEmbeddings`
-- Embeddings (Gemini): `from langchain_google_genai import GoogleGenerativeAIEmbeddings`
-- PDF: `from langchain_community.document_loaders import PyPDFLoader`
-- Ingestão: `from langchain_postgres import PGVector`
-- Busca: `similarity_search_with_score(query, k=10)`
-
-## OpenAI
-
-- Crie uma API Key da OpenAI.
-- Você vai precisar de um modelo de embeddings e de um modelo de LLM para responder. Consulte a documentação oficial da OpenAI para ver os modelos disponíveis.
-
-## Gemini
-
-- Crie uma API Key da Google.
-- Você vai precisar de um modelo de embeddings e de um modelo de LLM para responder. Consulte a documentação oficial do Google para ver os modelos disponíveis.
-
-Os limites de requisições gratuitas dos modelos podem mudar com frequência. Para informações atualizadas, consulte a documentação oficial do Google.
-
-## Escolha dos modelos
-
-Este desafio não fixa modelos. Nomes e versões mudam com frequência e alguns são descontinuados, então faz parte do desafio consultar a documentação oficial do provedor que você escolher, ver quais modelos estão disponíveis no momento e selecionar os que atendem ao objetivo. Para o volume deste desafio, os modelos mais leves e baratos de cada provedor são suficientes.
-
-Atenção: modelos de embedding diferentes geram vetores com dimensões diferentes. A tabela de vetores é criada na primeira ingestão, já com a dimensão do modelo que você escolheu. Se você trocar de modelo de embeddings depois disso, a ingestão passa a falhar por incompatibilidade de dimensão. Nesse caso é responsabilidade sua apagar a collection existente (ou o volume do banco) e refazer a ingestão do zero com o novo modelo.
-
-## Requisitos
-
-### 1. Ingestão do PDF
-
-- O PDF deve ser dividido em chunks de 1000 caracteres com overlap de 150.
-- Cada chunk deve ser convertido em embedding.
-- Os vetores devem ser armazenados no banco de dados PostgreSQL com pgVector.
-
-### 2. Consulta via CLI
-
-Criar um script Python para simular um chat no terminal.
-
-Passos ao receber uma pergunta:
-
-- Vetorizar a pergunta.
-- Buscar os 10 resultados mais relevantes (k=10) no banco vetorial.
-- Montar o prompt e chamar a LLM.
-- Retornar a resposta ao usuário.
-
-Prompt a ser utilizado:
-
-```
-CONTEXTO:
-{resultados concatenados do banco de dados}
-
-REGRAS:
-- Responda somente com base no CONTEXTO.
-- Se a informação não estiver explicitamente no CONTEXTO, responda:
-  "Não tenho informações necessárias para responder sua pergunta."
-- Nunca invente ou use conhecimento externo.
-- Nunca produza opiniões ou interpretações além do que está escrito.
-
-EXEMPLOS DE PERGUNTAS FORA DO CONTEXTO:
-Pergunta: "Qual é a capital da França?"
-Resposta: "Não tenho informações necessárias para responder sua pergunta."
-
-Pergunta: "Quantos clientes temos em 2024?"
-Resposta: "Não tenho informações necessárias para responder sua pergunta."
-
-Pergunta: "Você acha isso bom ou ruim?"
-Resposta: "Não tenho informações necessárias para responder sua pergunta."
-
-PERGUNTA DO USUÁRIO:
-{pergunta do usuário}
-
-RESPONDA A "PERGUNTA DO USUÁRIO"
-```
-
-## Estrutura obrigatória do projeto
-
-Faça um fork do repositório para utilizar a estrutura abaixo: https://github.com/devfullcycle/mba-ia-desafio-ingestao-busca
-
-```
-├── docker-compose.yml
-├── requirements.txt      # Dependências
-├── .env.example          # Template das variáveis de ambiente
-├── src/
-│   ├── ingest.py         # Script de ingestão do PDF
-│   ├── search.py         # Script de busca
-│   ├── chat.py           # CLI para interação com usuário
-├── document.pdf          # PDF para ingestão
-└── README.md             # Instruções de execução
-```
-
-## VirtualEnv para Python
-
-Crie e ative um ambiente virtual antes de instalar dependências:
-
-```
-python3 -m venv venv
-source venv/bin/activate
-```
-
-## Ordem de execução
-
-1. Subir o banco de dados:
-
-```
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
 docker compose up -d
 ```
 
-2. Executar ingestão do PDF:
+Preencha `GOOGLE_API_KEY` no `.env`. Os modelos são configuráveis por `GOOGLE_EMBEDDING_MODEL` e `GOOGLE_CHAT_MODEL`; consulte a [lista oficial do Gemini](https://ai.google.dev/gemini-api/docs/models) e confirme disponibilidade e cota no seu projeto. O `.env.example` contém sugestões, nunca uma chave. Para o banco fornecido, mantenha `DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/rag`.
 
-```
+Depois da indicação de banco saudável:
+
+```bash
 python src/ingest.py
-```
-
-3. Rodar o chat:
-
-```
 python src/chat.py
 ```
 
-## Entregável
+Pergunte sobre o conteúdo de `document.pdf`. Digite `sair`, `exit` ou `quit` para encerrar; Ctrl+C e EOF também encerram o chat. Perguntas vazias são ignoradas. Para usar outro PDF, ajuste `PDF_PATH` e execute a ingestão novamente.
 
-Repositório público no GitHub contendo todo o código-fonte e README com instruções claras de execução do projeto.
+## Fluxo e decisões
+
+- `src/ingest.py` lê páginas com `PyPDFLoader` e mantém página e posição nos metadados. O splitter usa `chunk_size=1000` e `chunk_overlap=150`; blocos são persistidos em lotes de 64.
+- Os IDs incluem a coleção, o hash do PDF e a posição do trecho. Reingerir o mesmo documento atualiza os mesmos registros, evitando duplicatas.
+- `src/config.py` acrescenta o hash do nome do modelo à coleção. Isso separa embeddings de modelos diferentes; não é preciso apagar documentos para trocar o modelo. A busca filtra também pelo hash do PDF atual, impedindo mistura com versões antigas. Dados antigos permanecem no banco até limpeza explícita.
+- `src/search.py` chama `similarity_search_with_score(..., k=10)` e concatena os trechos no prompt obrigatório. Uma instrução de sistema reforça que PDF e pergunta são dados, não instruções para alterar o comportamento.
+- Se não houver trechos, a resposta é determinística: **“Não tenho informações necessárias para responder sua pergunta.”** Quando há trechos, o modelo recebe essa mesma regra. O cumprimento de todas as regras pelo LLM precisa ser avaliado com perguntas reais; o programa não transforma essa instrução em garantia absoluta.
+- Cada pergunta usa apenas seu contexto recuperado. O chat não acrescenta histórico de respostas a consultas seguintes.
+
+O PDF precisa conter texto extraível; não há OCR. O PostgreSQL fornecido é um ambiente local de desenvolvimento. O carregador de PDF mantém o pacote recomendado pelo exercício; sua versão instalada emite um aviso de descontinuação de `langchain-community`, documentado pelos mantenedores. As versões estão fixadas em `requirements.txt` para reprodução.
+
+## Validação executada
+
+```bash
+PYTHONPATH=src pytest -q
+TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/rag \
+  PYTHONPATH=src pytest -q
+```
+
+Em 19/10/2026, a segunda execução passou em **6 testes** com PostgreSQL 17/pgvector real no Docker. A suíte verifica limites e posições dos chunks, leitura do PDF, IDs estáveis, busca com dez resultados e filtro por documento, recusa com índice vazio e persistência sem duplicatas após duas ingestões.
+
+O teste de integração cria uma coleção exclusiva, usa vetores determinísticos de teste e remove somente essa coleção ao terminar. Sem `TEST_DATABASE_URL`, ele é ignorado. Esses vetores não estão disponíveis no programa: a execução normal usa o Gemini.
+
+**Pendente:** ingestão com embeddings do Google e perguntas ponta a ponta ao Gemini, pois nenhuma chave foi fornecida. Os testes locais não comprovam qualidade semântica nem consumo de API. A chave deve ficar somente no `.env`, ignorado pelo Git.
+
+Para parar os serviços mantendo os dados, execute `docker compose down`.
