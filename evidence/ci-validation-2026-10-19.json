@@ -1,0 +1,46 @@
+{
+  "recorded_on": "2026-10-19",
+  "source": "GitHub official connector: fetch workflow run, fetch workflow job steps and fetch workflow job logs",
+  "repository": "marcoviz/prisma-pdf-search",
+  "tested_sha": "aec683f549de565ff2a6a18ac775e3f19c842a8a",
+  "branch": "feature/final-review-fixes",
+  "workflow": {
+    "name": "Validate PDF pipeline",
+    "path": ".github/workflows/verify.yml",
+    "run_id": 39333812904,
+    "run_attempt": 1,
+    "url": "https://github.com/marcoviz/prisma-pdf-search/actions/runs/39333812904",
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-10-19T22:16:52Z",
+    "updated_at": "2026-10-19T22:17:46Z"
+  },
+  "job": {
+    "id": 118338193087,
+    "name": "postgres-integration",
+    "url": "https://github.com/marcoviz/prisma-pdf-search/actions/runs/39333812904/job/118338193087",
+    "conclusion": "success"
+  },
+  "environment": {
+    "os": "Ubuntu 24.04.5",
+    "python": "3.12.15",
+    "database_image": "pgvector/pgvector:pg17",
+    "database": "PostgreSQL 17 with pgvector, real service container"
+  },
+  "command": "PYTHONPATH=src TEST_DATABASE_URL=<disposable PostgreSQL service> python -m pytest -q",
+  "result": {
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0,
+    "warnings": 1,
+    "duration_seconds": 3.25,
+    "dependency_check": "No broken requirements found."
+  },
+  "log_excerpts": [
+    "2026-10-19T22:17:35.0730362Z No broken requirements found.",
+    "2026-10-19T22:17:39.4297961Z 20 passed, 1 warning in 3.25s"
+  ],
+  "warning": "DeprecationWarning: langchain-community is being sunset and is no longer actively maintained.",
+  "scope": "Full pytest suite, including real PostgreSQL persistence and six retry scenarios. Provider failures and retry delays are simulated; CI does not call Gemini. The separate live-validation-2026-10-19.json records the previous live Gemini checks.",
+  "retention": "This summary preserves the verified CI result independently of the workflow artifact retention period."
+}
