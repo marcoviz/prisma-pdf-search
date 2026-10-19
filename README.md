@@ -36,7 +36,7 @@ Pergunte sobre o conteúdo de `document.pdf`. Digite `sair`, `exit` ou `quit` pa
 
 O PDF precisa conter texto extraível; não há OCR. O PostgreSQL fornecido é um ambiente local de desenvolvimento. O carregador de PDF mantém o pacote recomendado pelo exercício; sua versão instalada emite um aviso de descontinuação de `langchain-community`, documentado pelos mantenedores. As versões estão fixadas em `requirements.txt` para reprodução.
 
-Uma resposta `429 RESOURCE_EXHAUSTED` indica limite do provedor. A ingestão inicial em lotes de 64 chegou a esse limite com a cota gratuita testada; por isso os valores padrão distribuem os 67 chunks do PDF em cinco lotes ao longo de aproximadamente dois minutos. Se houver outros processos consumindo a mesma cota, reduza o lote ou aumente o intervalo. Após a cota se recuperar, reexecutar a ingestão mantém os IDs e não duplica os registros já persistidos. O intervalo reduz o consumo por minuto, mas não amplia a cota diária.
+Uma resposta `429 RESOURCE_EXHAUSTED` indica limite do provedor. A ingestão inicial em lotes de 64 chegou a esse limite com a cota gratuita testada; por isso os valores padrão distribuem os 67 chunks do PDF em cinco lotes ao longo de aproximadamente dois minutos. Se houver outros processos consumindo a mesma cota, reduza o lote ou aumente o intervalo. Cada lote que recebe HTTP 429 tem no máximo três novas tentativas, após 30, 60 e 120 segundos, preservando seus IDs. O código reconhece também o erro Gemini encapsulado pelo LangChain, sem depender do texto da mensagem. Erros de autenticação, entrada inválida e banco não são repetidos automaticamente. Se as tentativas se esgotarem, o CLI encerra com erro sem imprimir credenciais; após a recuperação da cota, reexecutar a ingestão não duplica registros. Essas esperas não ampliam a cota diária.
 
 ## Validação executada
 
@@ -46,7 +46,7 @@ TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/rag \
   PYTHONPATH=src pytest -q
 ```
 
-Em 19/10/2026, a suíte completa passou em **14 testes**, sem testes ignorados, com PostgreSQL 17/pgvector real no Docker. A cobertura verifica limites e posições dos chunks, leitura do PDF, IDs estáveis, tamanho dos lotes, intervalo entre envios, rejeição de configurações inválidas, busca com dez resultados e filtro por documento, recusa com índice vazio e persistência sem duplicatas após duas ingestões. A única advertência foi a descontinuação do carregador `langchain-community`, já descrita acima.
+Em 19/10/2026, a suíte original passou em **14 testes**, sem testes ignorados, com PostgreSQL 17/pgvector real no Docker. A cobertura verifica limites e posições dos chunks, leitura do PDF, IDs estáveis, tamanho dos lotes, intervalo entre envios, rejeição de configurações inválidas, busca com dez resultados e filtro por documento, recusa com índice vazio e persistência sem duplicatas após duas ingestões. A única advertência foi a descontinuação do carregador `langchain-community`, já descrita acima. A revisão final acrescenta seis cenários de retry: recuperação de 429 encapsulado, limite de tentativas, falhas 400/403/banco sem retry e proteção contra falso positivo ou ciclo na cadeia de exceções. Esses cenários simulam somente as falhas e a espera; não provocam esgotamento de cota real.
 
 O teste de integração cria uma coleção exclusiva, usa vetores determinísticos de teste e remove somente essa coleção ao terminar. Sem `TEST_DATABASE_URL`, ele é ignorado. Esses vetores não estão disponíveis no programa: a execução normal usa o Gemini.
 
