@@ -1,5 +1,6 @@
 """Indexa o PDF com IDs estáveis e chunks de 1000/150 caracteres."""
 import sys
+import time
 from hashlib import sha256
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -26,8 +27,11 @@ def ingest_pdf(settings=None, store=None):
         chunk.metadata.update(document_sha256=digest, chunk_index=index, source=settings.pdf_path.name)
         ids.append(sha256(f'{settings.collection}:{digest}:{index}'.encode()).hexdigest())
     store = store if store is not None else vector_store(settings)
-    for offset in range(0, len(chunks), 64):
-        store.add_documents(chunks[offset:offset + 64], ids=ids[offset:offset + 64])
+    batch_size = settings.ingest_batch_size
+    for offset in range(0, len(chunks), batch_size):
+        if offset and settings.ingest_batch_delay_seconds:
+            time.sleep(settings.ingest_batch_delay_seconds)
+        store.add_documents(chunks[offset:offset + batch_size], ids=ids[offset:offset + batch_size])
     return len(chunks)
 
 def main():

@@ -47,3 +47,35 @@ def test_empty_question_is_rejected():
     with pytest.raises(ValueError):
         create_answerer(store, model, 'hash')('  ')
     store.similarity_search_with_score.assert_not_called()
+
+def test_ingestion_batches_all_documents_and_waits_between_batches(monkeypatch):
+    import ingest
+    settings = Settings('unused', 'paced_collection', ROOT / 'document.pdf', 'embedding', 'chat', 16, 30)
+    store, sleep = MagicMock(), MagicMock()
+    monkeypatch.setattr(ingest.time, 'sleep', sleep)
+    count = ingest_pdf(settings, store)
+    calls = store.add_documents.call_args_list
+    all_ids = [value for call in calls for value in call.kwargs['ids']]
+    assert len(calls) == (count + 15) // 16
+    assert all(1 <= len(call.args[0]) <= 16 for call in calls)
+    assert len(all_ids) == len(set(all_ids)) == count
+    assert sleep.call_count == len(calls) - 1
+    assert all(call.args == (30,) for call in sleep.call_args_list)
+
+@pytest.mark.parametrize(('name', 'value'), [
+    ('INGEST_BATCH_SIZE', '0'), ('INGEST_BATCH_SIZE', '65'), ('INGEST_BATCH_SIZE', 'not-a-number'),
+    ('INGEST_BATCH_DELAY_SECONDS', '-1'), ('INGEST_BATCH_DELAY_SECONDS', '301'),
+    ('INGEST_BATCH_DELAY_SECONDS', 'nan'), ('INGEST_BATCH_DELAY_SECONDS', 'inf'),
+])
+def test_settings_rejects_invalid_ingestion_rate_configuration(monkeypatch, name, value):
+    for key, val in {
+        'GOOGLE_API_KEY': 'unit-test-only',
+        'DATABASE_URL': 'postgresql+psycopg://postgres:postgres@localhost:5432/rag',
+        'GOOGLE_EMBEDDING_MODEL': 'embedding', 'GOOGLE_CHAT_MODEL': 'chat',
+        'PDF_PATH': str(ROOT / 'document.pdf'),
+        'INGEST_BATCH_SIZE': '16', 'INGEST_BATCH_DELAY_SECONDS': '30',
+    }.items():
+        monkeypatch.setenv(key, val)
+    monkeypatch.setenv(name, value)
+    with pytest.raises(ValueError, match='INGEST_BATCH'):
+        Settings.load()
